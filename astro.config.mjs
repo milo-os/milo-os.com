@@ -5,7 +5,9 @@ import AstroPureIntegration from 'astro-pure';
 import { defineConfig } from 'astro/config';
 import rehypeKatex from 'rehype-katex';
 import remarkMath from 'remark-math';
+import { loadEnv } from 'vite';
 import node from '@astrojs/node';
+import process from 'node:process';
 
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.js';
 import {
@@ -19,8 +21,13 @@ import {
 import config from './src/site.config.js';
 import { remarkRemoveFirstH1 } from './src/plugins/remark-remove-first-h1.ts';
 
+const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
+
+const siteUrl = process.env.SITE_URL || env.SITE_URL;
+const port = parseInt(process.env.PORT || env.PORT || '4321');
+
 export default defineConfig({
-  site: 'https://milo-os.com',
+  site: siteUrl || `http://localhost:${port}`,
   trailingSlash: 'never',
 
   adapter: node({

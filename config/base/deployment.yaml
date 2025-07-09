@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: milo-os-com
+    app.kubernetes.io/name: milo-os-com
+    app.kubernetes.io/version: 1.0.0
+  name: milo-os-com
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: frontend
+      app.kubernetes.io/instance: milo-os-com
+      app.kubernetes.io/name: milo-os-com
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/instance: milo-os-com
+        app.kubernetes.io/name: milo-os-com
+    spec:
+      containers:
+        - name: milo-os-com
+          image: ghcr.io/datum-cloud/milo-os.com:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4321
+              name: http
+              protocol: TCP
+          env:
+            - name: SITE_URL
+              value: https://milo-os-com.staging.env.datum.net/
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 10
+            httpGet:
+              path: /
+              port: 4321
+              scheme: HTTP
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 10
+            httpGet:
+              path: /
+              port: 4321
+              scheme: HTTP
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

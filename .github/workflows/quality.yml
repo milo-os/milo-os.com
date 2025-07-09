@@ -157,24 +157,6 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
-  
-  # docker:
-  #   needs: build
-  #   name: Docker Build
-  #   runs-on: ubuntu-latest
-  #   if: ${{ !failure() && !cancelled() }}
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
-
-  #     - name: Build Docker Image (Production)
-  #       run: docker compose build --no-cache prod
-
-  #     - name: Build Docker Image (Development)
-  #       run: docker compose build --no-cache dev
 
   status-check:
     needs: [install, lint, typecheck, build]
