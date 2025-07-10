@@ -23,12 +23,15 @@ type Props<Tag extends HTMLTag> = Polymorphic<{ as: Tag }> & {
   link: LinkData;
   detailed?: boolean;
   class?: string;
+  target?: string | null;
+  rel?: string | null;
 };
 
-const { as: Tag = 'div', link, detailed = false, class: className } = Astro.props;
+const { as: Tag = 'div', link, detailed = false, class: className, target, rel } = Astro.props;
 
 const { title, url, description, image, tags, addedDate, draft } = link;
 // const domain = new URL(url).hostname.replace('www.', '');
+const relValue = rel !== undefined ? rel : target === '_blank' ? 'noopener noreferrer' : undefined;
 ---
 
 <li
@@ -49,8 +52,8 @@ const { title, url, description, image, tags, addedDate, draft } = link;
       detailed && image && 'max-md:pt-24'
     )}
     href={url}
-    target="_blank"
-    rel="noopener noreferrer"
+    target={target}
+    rel={relValue}
   >
     {
       detailed && image && (

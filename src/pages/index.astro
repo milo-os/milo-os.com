@@ -118,7 +118,12 @@ if (changelogEntry && changelogEntry.body) {
           control plane for modern service providers, built on top of a comprehensive system of
           record that ties together key parts of your business.
         </p>
-        <Button title="Why we're building Milo" class="w-fit self-end" href="/about" style="ahead" />
+        <Button
+          title="Why we're building Milo"
+          class="w-fit self-end"
+          href="/about"
+          style="ahead"
+        />
       </Section>
 
       <Section title="Roadmap">
@@ -160,17 +165,9 @@ if (changelogEntry && changelogEntry.body) {
           <Link
             link={{
               title: 'Docs',
-              url: 'https://docs.datum.net/docs/overview/',
+              url: '/docs/overview/',
+              blank: false,
             }}
-          />
-          <Link
-            link={{
-              title: 'API',
-              url: 'https://docs.datum.net/docs/api/',
-              description:
-                'Datum Cloud provides a declarative API platform to create the infrastructure necessary to deploy and manage services with advanced networking capabilities.',
-            }}
-            detailed={true}
           />
           <Link
             link={{

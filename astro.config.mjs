@@ -20,8 +20,8 @@ import config from './src/site.config.js';
 import { remarkRemoveFirstH1 } from './src/plugins/remark-remove-first-h1.ts';
 
 export default defineConfig({
-  site: 'https://milo-os.com',
-  trailingSlash: 'never',
+  site: 'https://www.milo-os.com',
+  trailingSlash: 'ignore',
 
   adapter: node({
     mode: 'standalone',

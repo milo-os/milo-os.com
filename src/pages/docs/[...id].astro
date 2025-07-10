@@ -1,54 +1,54 @@
 ---
-import { render, type CollectionEntry } from 'astro:content'
+import { render, type CollectionEntry } from 'astro:content';
 
-import { MediumZoom } from 'astro-pure/advanced'
-import { TOC } from 'astro-pure/components/pages'
-import { getBlogCollection, sortMDByDate } from 'astro-pure/server'
-import { Collapse } from 'astro-pure/user'
-import PageLayout from '@/layouts/ContentLayout.astro'
+import { MediumZoom } from 'astro-pure/advanced';
+import { TOC } from '@packages/pure/components/pages';
+import { getBlogCollection, sortMDByDate } from 'astro-pure/server';
+import { Collapse } from 'astro-pure/user';
+import PageLayout from '@/layouts/ContentLayout.astro';
 
-import DocsContents from './DocsContents.astro'
+import DocsContents from './DocsContents.astro';
 
-export const prerender = true
+export const prerender = true;
 
 export async function getStaticPaths() {
-  const posts = sortMDByDate(await getBlogCollection('docs'))
+  const posts = sortMDByDate(await getBlogCollection('docs'));
   return posts.map((post) => ({
     params: { id: post.id },
-    props: { post }
-  }))
+    props: { post },
+  }));
 }
 
 type Props = {
-  post: CollectionEntry<'docs'>
-}
+  post: CollectionEntry<'docs'>;
+};
 
-const { post } = Astro.props
-const { Content, headings } = await render(post)
-const { description, title } = post.data
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+const { description, title } = post.data;
 ---
 
-<PageLayout meta={{ description, title }} back='/docs'>
-  <Fragment slot='sidebar'>
+<PageLayout meta={{ description, title }} back="/docs">
+  <Fragment slot="sidebar">
     {!!headings.length && <TOC {headings} />}
-    <DocsContents class='docs-toc block mt-3' />
+    <DocsContents class="docs-toc block mt-3" />
   </Fragment>
 
-  <Fragment slot='header'>
-    <h1 class='text-2xl font-medium sm:mb-2 sm:text-3xl'>
+  <Fragment slot="header">
+    <h1 class="text-2xl font-medium sm:mb-2 sm:text-3xl">
       {title}
     </h1>
-    <div class='mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs leading-6 text-muted-foreground'>
+    <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs leading-6 text-muted-foreground">
       {
         // Description
         description && (
-          <blockquote class='text-sm italic text-muted-foreground'>
+          <blockquote class="text-sm italic text-muted-foreground">
             <q>{description}</q>
           </blockquote>
         )
       }
     </div>
-    <Collapse class='md:hidden' title='See more docs'>
+    <Collapse class="md:hidden" title="See more docs">
       <DocsContents title={false} />
     </Collapse>
   </Fragment>
@@ -56,8 +56,8 @@ const { description, title } = post.data
   <Content />
 
   <div
-    class='mt-5 not-prose my-3 flex flex-col gap-y-2 rounded-xl border px-4 py-3 sm:py-4'
-    slot='bottom'
+    class="mt-5 not-prose my-3 flex flex-col gap-y-2 rounded-xl border px-4 py-3 sm:py-4"
+    slot="bottom"
   >
     <DocsContents />
   </div>

@@ -1,53 +1,107 @@
 ---
-import { type CollectionEntry } from 'astro:content'
+import { type CollectionEntry } from 'astro:content';
 
-import { getBlogCollection } from 'astro-pure/server'
-import { cn } from 'astro-pure/utils'
+import { getBlogCollection } from 'astro-pure/server';
+import { cn } from 'astro-pure/utils';
 
-export const prerender = true
-export const partial = true
+export const prerender = true;
+export const partial = true;
 
-const docsCollection = (await getBlogCollection('docs')) as CollectionEntry<'docs'>[]
+const docsCollection = (await getBlogCollection('docs')) as CollectionEntry<'docs'>[];
+
 // group docs by id first part (setup, integrations, advanced, etc.)
 const docsByCate = docsCollection.reduce((acc: { [key: string]: typeof docsCollection }, doc) => {
-  const id = doc.id.split('/')[0]
-  if (!acc[id]) acc[id] = [] as typeof docsCollection
-  acc[id].push(doc)
-  return acc
-}, {})
+  const id = doc.id.split('/')[0];
+  if (!acc[id]) acc[id] = [] as typeof docsCollection;
+  acc[id].push(doc);
+  return acc;
+}, {});
 
 const docCategories = {
-  setup: 'Setup',
-  integrations: 'Integrations',
-  advanced: 'Advanced'
-}
+  overview: 'Overview',
+  'get-started': 'Get Started',
+  tasks: 'Tasks',
+  tutorials: 'Tutorials',
+  api: 'API',
+};
+
+type DocItem = { type: 'doc' } & CollectionEntry<'docs'>;
+type CategoryItem = {
+  type: 'category';
+  id: string;
+  title: string;
+  docs: CollectionEntry<'docs'>[];
+};
+type RenderItem = DocItem | CategoryItem;
+
+const rootDocs: DocItem[] = [];
+const categories: CategoryItem[] = [];
+
+Object.entries(docsByCate).forEach(([id, docs]) => {
+  if (docs.length === 1 && !docs[0].id.includes('/')) {
+    rootDocs.push({ type: 'doc', ...docs[0] });
+  } else {
+    const title =
+      (docCategories as Record<string, string>)[id] ||
+      id.charAt(0).toUpperCase() + id.slice(1).replaceAll('-', ' ');
+    categories.push({ type: 'category', id, title, docs });
+  }
+});
+
+rootDocs.sort((a, b) => a.data.order - b.data.order);
+categories.sort((a, b) => {
+  const a_order = Math.min(...a.docs.map((d) => d.data.order));
+  const b_order = Math.min(...b.docs.map((d) => d.data.order));
+  return a_order - b_order;
+});
+
+const itemsToRender: RenderItem[] = [...rootDocs, ...categories];
 
 type Props = {
-  title?: boolean
-  class?: string
-}
+  title?: boolean;
+  class?: string;
+};
 
-const { title = true, class: className, ...props } = Astro.props
+const { title = true, class: className, ...props } = Astro.props;
 ---
 
 <docs-toc class={cn('not-prose', className)} {...props}>
-  {title && <h2 class='text-foreground font-semibold'>DOCS</h2>}
-  <ul class='mt-4 flex flex-col gap-y-5'>
+  {title && <h2 class="text-foreground font-semibold">DOCS</h2>}
+  <ul class="mt-4 flex flex-col gap-y-2">
     {
-      Object.entries(docCategories).map(([id, title]: [string, string]) => (
-        <li>
-          <h3 class='text-muted-foreground text-xs tracking-widest uppercase'>{title}</h3>
-          <ul class='mt-2 flex flex-col'>
-            {docsByCate[id]
-              .sort((a, b) => a.data.order - b.data.order)
-              .map((doc) => (
-                <li class='docs-item relative ms-2 px-3 py-1 text-foreground/75 transition-all rounded-2xl'>
-                  <a href={`/docs/${doc.id}`}>{doc.data.title}</a>
-                </li>
-              ))}
-          </ul>
-        </li>
-      ))
+      itemsToRender.map((item) => {
+        if (item.type === 'doc') {
+          return (
+            <li class="docs-item relative ms-2 px-3 py-1 text-foreground/75 transition-all rounded-2xl">
+              <a href={`/docs/${item.id}`}>
+                {item.data.title.length > 20
+                  ? `${item.data.title.slice(0, 20)}...`
+                  : item.data.title}
+              </a>
+            </li>
+          );
+        }
+        return (
+          <li>
+            <h3 class="text-muted-foreground text-xs tracking-widest uppercase mt-2">
+              {item.title}
+            </h3>
+            <ul class="mt-2 flex flex-col">
+              {(item as CategoryItem).docs
+                .sort((a, b) => a.data.order - b.data.order)
+                .map((doc) => (
+                  <li class="docs-item relative ms-2 px-3 py-1 text-foreground/75 transition-all rounded-2xl">
+                    <a href={`/docs/${doc.id}`}>
+                      {doc.data.title.length > 20
+                        ? `${doc.data.title.slice(0, 20)}...`
+                        : doc.data.title}
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </li>
+        );
+      })
     }
   </ul>
 </docs-toc>
@@ -65,35 +119,35 @@ const { title = true, class: className, ...props } = Astro.props
   }
 
   docs-toc :global(.docs-item.docs-hl) {
-    background-color: hsl(var(--muted) / var(--un-bg-opacity));
+    background-color: white;
     font-weight: 500;
     color: hsl(var(--primary) / var(--un-text-opacity));
 
     &::before {
-      background-color: hsl(var(--primary) / var(--un-bg-opacity));
+      background-color: var(--highlightColor, hsl(var(--melon) / var(--un-text-opacity)));
     }
   }
 </style>
 
 <script>
   class DocsTOC extends HTMLElement {
-    link: string = ''
+    link: string = '';
 
     constructor() {
-      super()
+      super();
 
-      this.link = window.location.pathname
+      this.link = window.location.pathname;
     }
 
     connectedCallback() {
-      const links = this.querySelectorAll('a')
+      const links = this.querySelectorAll('a');
       links.forEach((link) => {
         if (link.getAttribute('href') === this.link) {
-          link.parentElement?.classList.add('docs-hl')
+          link.parentElement?.classList.add('docs-hl');
         }
-      })
+      });
     }
   }
 
-  customElements.define('docs-toc', DocsTOC)
+  customElements.define('docs-toc', DocsTOC);
 </script>

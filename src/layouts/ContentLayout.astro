@@ -46,15 +46,5 @@ const { meta, highlightColor, back = '/', ...props } = Astro.props;
     </article>
   </main>
 
-  <div class="bottom mt-6 items-start gap-x-10 md:flex">
-    {/* Bottom */}
-    <div class="mt-8 flex-1 text-muted-foreground md:min-w-[50ch]">
-      <slot name="bottom" />
-    </div>
-    <div class="min-w-48 basis-60">
-      <slot name="bottom-sidebar" />
-    </div>
-  </div>
-
   <BackToTop header="content-header" content="content" />
 </PageLayout>
