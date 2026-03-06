@@ -40,11 +40,11 @@ spec:
               value: https://www.milo-os.com/
           resources:
             requests:
-              cpu: 100m
-              memory: 100Mi
+              cpu: 250m
+              memory: 150Mi
             limits:
-              cpu: 200m
-              memory: 200Mi
+              cpu: 500m
+              memory: 250Mi
           livenessProbe:
             failureThreshold: 3
             initialDelaySeconds: 5
