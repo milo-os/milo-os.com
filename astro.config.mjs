@@ -1,11 +1,9 @@
-// @ts-check
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import mdx from '@astrojs/mdx';
 
 import { loadEnv } from 'vite';
 import node from '@astrojs/node';
-
 import alpinejs from '@astrojs/alpinejs';
 
 const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
@@ -18,21 +16,26 @@ export default defineConfig({
   trailingSlash: 'always',
   output: 'static',
   adapter: node({
-    mode: 'standalone',
+    mode: 'middleware',
   }),
   image: {
     layout: 'constrained',
   },
   integrations: [alpinejs(), mdx()],
-
   vite: {
-    // @ts-expect-error - Tailwind Vite plugin type mismatch with Vite's expected plugin types
     plugins: [tailwindcss()],
     css: {
       devSourcemap: true,
     },
   },
-
+  security: {
+    allowedDomains: [
+      {
+        hostname: 'website.staging.env.datum.net',
+        protocol: 'https',
+      },
+    ],
+  },
   experimental: {},
   prefetch: true,
 });
