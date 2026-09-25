@@ -1,8 +1,12 @@
 # Release
 
 This service is deployable within a Kubernetes environment and depends on the
-Gateway API to expose the application to the world. We also use Datum Cloud's
-edge as our proxy to get traffic from the internet edge back to our service.
+Gateway API to expose the application to the world. The base configuration also
+includes an Envoy Gateway traffic policy, so the cluster needs Envoy Gateway
+installed.
+
+We also use Datum Cloud's edge as our proxy to get traffic from the internet
+edge back to our service.
 
 ## Deployment Configurations
 
