@@ -70,6 +70,9 @@ dist/
 .unikraft/
 *.oci
 
+# `datumctl compute deploy` saves the resolved manifest here on every run
+/workload.yaml
+
 # Playwright
 /test-results/
 /playwright-report/

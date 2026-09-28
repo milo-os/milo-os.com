@@ -11,16 +11,15 @@ on:
     types: ["published"]
 
 jobs:
-  # Builds and pushes directly with docker/build-push-action instead of the
-  # shared datum-cloud/actions publish-docker.yaml workflow, because that
-  # workflow's build-push-action defaults to attaching build-provenance
-  # attestations. That turns the pushed image into an OCI image *index* (the
-  # real linux/amd64 manifest plus an "unknown/unknown" attestation manifest),
-  # which Datum Compute's unikernel runtime class fails to pull
-  # (`ImageUnavailable: The instance image could not be pulled`) even though
-  # the general-purpose runtime class pulls the same index fine. Disabling
-  # provenance/sbom here produces the plain single-manifest image the
-  # unikernel runtime expects.
+  # Built with `datumctl compute build` instead of the shared
+  # datum-cloud/actions publish-docker.yaml workflow (or a plain
+  # docker/build-push-action step). A normal docker/OCI container build,
+  # however clean, is a linux/amd64 container image; Datum Compute's unikernel
+  # runtime class doesn't boot those — it boots a distinct "kraftcloud"-
+  # platform artifact that only datumctl's own "Packaging root filesystem" /
+  # "Assembling Compute image" steps produce. A plain build's image reports
+  # ImageUnavailable ("The instance image could not be pulled") on unikernel
+  # Instances even though it pulls and runs fine on general-purpose ones.
   publish-container-image:
     permissions:
       id-token: write
@@ -50,26 +49,23 @@ jobs:
           images: ghcr.io/milo-os/milo-os-com
           tags: |
             type=ref,event=pr,suffix=-{{commit_date 'YYYYMMDD-HHmmss'}},prefix=v0.0.0-
-            type=ref,event=pr,prefix=v0.0.0-
             type=ref,event=branch,suffix=-{{commit_date 'YYYYMMDD-HHmmss'}},prefix=v0.0.0-
-            type=ref,event=branch,prefix=v0.0.0-
             type=semver,pattern=v{{version}}
-            type=semver,pattern=v{{major}}.{{minor}}
-            type=semver,pattern=v{{major}}
             type=sha,prefix=v0.0.0-
 
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v7.1.0
-        with:
-          context: .
-          file: Dockerfile.datum
-          push: true
-          provenance: false
-          sbom: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Install datumctl
+        run: |
+          curl -fsSL -o /tmp/datumctl.tar.gz \
+            https://github.com/datum-cloud/datumctl/releases/latest/download/datumctl_Linux_x86_64.tar.gz
+          tar -xzf /tmp/datumctl.tar.gz -C /tmp datumctl
+          sudo install -m 0755 /tmp/datumctl /usr/local/bin/datumctl
+          datumctl plugin install compute
+
+      - name: Build and Push Compute Image
+        run: |
+          datumctl compute build --push \
+            --output ghcr.io/milo-os/milo-os-com:${{ steps.meta.outputs.version }} \
+            .
 
   publish-kustomize-bundles:
     needs: publish-container-image
