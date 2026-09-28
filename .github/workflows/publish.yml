@@ -20,6 +20,7 @@ jobs:
     with:
       registry-organization: milo-os
       image-name: milo-os-com
+      dockerfile-path: Dockerfile.datum
     secrets: inherit
 
   publish-kustomize-bundles:

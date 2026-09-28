@@ -6,33 +6,40 @@ spec:
   template:
     spec:
       runtime:
+        class: unikernel
         resources:
           instanceType: datumcloud/d1-standard-2
         sandbox:
           containers:
             - name: app
-              image: index.unikraft.io/datum/milo-os-com:slim
+              image: ghcr.io/milo-os/milo-os-com:slim
               env:
                 - name: NODE_ENV
                   value: production
                 - name: PORT
                   value: "4321"
+                # Datum Cloud networks are IPv6-only; 0.0.0.0 only opens an
+                # IPv4 socket and the app becomes silently unreachable.
+                - name: HOST
+                  value: "::"
                 - name: SITE_URL
                   value: "https://www.milo-os.com/"
+                - name: __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+                  value: "www.milo-os.com"
                 - name: APP_ID
                   valueFrom:
                     secretKeyRef:
-                      name: milo-os-com-secrets
+                      name: milo-os-com
                       key: APP_ID
                 - name: APP_INSTALLATION_ID
                   valueFrom:
                     secretKeyRef:
-                      name: milo-os-com-secrets
+                      name: milo-os-com
                       key: APP_INSTALLATION_ID
                 - name: APP_PRIVATE_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: milo-os-com-secrets
+                      name: milo-os-com
                       key: APP_PRIVATE_KEY
               ports:
                 - name: http
@@ -41,6 +48,8 @@ spec:
       networkInterfaces:
         - network:
             name: default
+          ipFamilies:
+            - IPv6
   placements:
     - name: us
       cityCodes:
