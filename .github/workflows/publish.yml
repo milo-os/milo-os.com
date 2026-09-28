@@ -11,17 +11,65 @@ on:
     types: ["published"]
 
 jobs:
+  # Builds and pushes directly with docker/build-push-action instead of the
+  # shared datum-cloud/actions publish-docker.yaml workflow, because that
+  # workflow's build-push-action defaults to attaching build-provenance
+  # attestations. That turns the pushed image into an OCI image *index* (the
+  # real linux/amd64 manifest plus an "unknown/unknown" attestation manifest),
+  # which Datum Compute's unikernel runtime class fails to pull
+  # (`ImageUnavailable: The instance image could not be pulled`) even though
+  # the general-purpose runtime class pulls the same index fine. Disabling
+  # provenance/sbom here produces the plain single-manifest image the
+  # unikernel runtime expects.
   publish-container-image:
     permissions:
       id-token: write
       contents: read
       packages: write
-    uses: datum-cloud/actions/.github/workflows/publish-docker.yaml@v1.14.0
-    with:
-      registry-organization: milo-os
-      image-name: milo-os-com
-      dockerfile-path: Dockerfile.datum
-    secrets: inherit
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/milo-os/milo-os-com
+          tags: |
+            type=ref,event=pr,suffix=-{{commit_date 'YYYYMMDD-HHmmss'}},prefix=v0.0.0-
+            type=ref,event=pr,prefix=v0.0.0-
+            type=ref,event=branch,suffix=-{{commit_date 'YYYYMMDD-HHmmss'}},prefix=v0.0.0-
+            type=ref,event=branch,prefix=v0.0.0-
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=semver,pattern=v{{major}}
+            type=sha,prefix=v0.0.0-
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v7.1.0
+        with:
+          context: .
+          file: Dockerfile.datum
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   publish-kustomize-bundles:
     needs: publish-container-image
