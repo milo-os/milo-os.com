@@ -1,0 +1,13 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: milo-os-com
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: milo-os-com
+  tcpKeepalive:
+    idleTime: 60s
+    interval: 15s
+    probes: 3
