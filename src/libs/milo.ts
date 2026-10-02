@@ -1,7 +1,6 @@
 import { graph } from '@/src/libs/github';
 import { Cache } from '@libs/cache';
 
-import roadmapsFallbackData from '@content/roadmap.json';
 import changelogsFallbackData from '@content/changelog.json';
 
 const cache = new Cache('.cache');
@@ -137,12 +136,8 @@ async function roadmaps(): Promise<RoadmapProps[]> {
       cache.set('roadmaps', roadmaps, 1000 * 60 * 10); // cache for 30 minutes
       return roadmaps;
     } catch {
-      if (roadmaps.length < 1) {
-        console.log('Roadmap: Using static roadmap data as fallback.');
-        roadmaps = roadmapsFallbackData as RoadmapProps[];
-      }
-
-      return roadmaps;
+      console.log('Roadmap: Failed to fetch roadmap data, showing empty list.');
+      return [];
     }
   }
 }

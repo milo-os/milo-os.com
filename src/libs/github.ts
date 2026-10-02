@@ -3,12 +3,10 @@ import { createAppAuth } from '@octokit/auth-app';
 import { graphql } from '@octokit/graphql';
 import type { RequestParameters } from '@octokit/types';
 
-const appId = import.meta.env.APP_ID || process.env.APP_ID;
-const privateKey = import.meta.env.APP_PRIVATE_KEY || process.env.APP_PRIVATE_KEY;
-const installationId = parseInt(
-  import.meta.env.APP_INSTALLATION_ID || process.env.APP_INSTALLATION_ID || '0',
-  10
-);
+// Read from process.env only: import.meta.env would inline these secrets into the build output.
+const appId = process.env.APP_ID;
+const privateKey = process.env.APP_PRIVATE_KEY;
+const installationId = parseInt(process.env.APP_INSTALLATION_ID || '0', 10);
 
 async function graph(query: string, variables?: RequestParameters) {
   let response = {};
