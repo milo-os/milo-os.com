@@ -1,7 +1,0 @@
-spec: v0.7
-name: milo-os-com
-runtime: base-compat:latest
-# rootfs.format omitted: base-compat boots a CPIO initramfs, not erofs.
-rootfs:
-  source: ./Dockerfile.unikraft
-cmd: ["/usr/bin/node", "/usr/src/dist/server/server.mjs"]
