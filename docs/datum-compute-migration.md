@@ -74,16 +74,12 @@ in the infra repo.
 
 None of these steps touches production.
 
-1. **Runtime and secrets.** The unikernel runtime does not support `envFrom`
-   (Datum docs, "Unikernels"). The workload imports `milo-os-com-secrets` that
-   way (`APP_ID`, `APP_INSTALLATION_ID`, `APP_PRIVATE_KEY`, `SITE_URL`, `PORT`,
-   `ASTRO_TELEMETRY_DISABLED`), so the GitHub App values may not reach the
-   process. The app reads them from `process.env` only, and uses them for the
-   roadmap and changelog. Check that those pages show real data on Compute (step
-   3). If they do not, either pass each key with `env[].valueFrom`, or deploy on
-   `general-purpose`, which supports `envFrom`. A workload keeps its runtime
-   class, so that means a new workload name and destroying the old one.
-   `CACHE_CLEAR_SECRET` (used by `/api/cache-clear`) is not in the Compute Secret.
+1. **Secrets.** The workload imports `milo-os-com-secrets` with `envFrom`
+   (`APP_ID`, `APP_INSTALLATION_ID`, `APP_PRIVATE_KEY`, `SITE_URL`, `PORT`,
+   `ASTRO_TELEMETRY_DISABLED`). The app reads the GitHub App values from
+   `process.env` only, and uses them for the roadmap and changelog; both show
+   real GitHub data on Compute. `CACHE_CLEAR_SECRET` (used by `/api/cache-clear`)
+   is not in the Compute Secret.
 2. **Image.** `v1.2.6` exists in GHCR but is not a git tag or a release (latest
    is `v1.2.5`), and nothing records where it was built. Build the image from a
    tag in CI before the cutover, and deploy that.
@@ -267,10 +263,21 @@ forces the order, and it means a short outage of HTTPS on `www`.
 
 ## After the move
 
-- CI: follow `agents.datum.net` (release-please plus a deploy workflow that builds
-  the image from the release tag and deploys it). Fix `.release-please-manifest.json`
-  first: it says `1.0.0` while the latest tag is `v1.2.5`, and there is no
-  release-please workflow.
+- CI: `release-please.yml` keeps a release PR open from the conventional commits
+  on `main`. Merging it creates the tag `vX.Y.Z` and calls `deploy-datum.yml`,
+  which builds `Dockerfile.unikraft` with `datumctl compute build`, pushes
+  `ghcr.io/milo-os/milo-os-com:vX.Y.Z-compute` and runs
+  `datumctl compute deploy milo-os-com --runtime-class unikernel` in
+  `datum-cloud`. Everything not named in that command (the `milo-os-com-secrets`
+  import, the allowed host) carries forward from the running workload. The deploy
+  can also be run by hand from Actions, which tags the image `sha-<short sha>-compute`.
+  The job logs in as a Datum service account whose credentials JSON is the
+  `DATUM_SA_CREDENTIALS` secret of the `datum-compute` GitHub environment.
+  Because the tag has the `-compute` suffix it never collides with the Kubernetes
+  image that `publish.yml` pushes.
+- A release created by `GITHUB_TOKEN` does not start `publish.yml` on
+  `release: published`, so the Kubernetes image is no longer published on release
+  unless release-please is given a PAT or GitHub App token.
 - Retire Kubernetes: remove the app from the infra repo, and the hostname entry
   `milo-os-com.prod.env.datum.net` in
   `infrastructure/envoy-gateway-system/gateways/external/production/kustomization.yaml`.
@@ -283,5 +290,4 @@ forces the order, and it means a short outage of HTTPS on `www`.
 - That the Gateway accepts a `datumproxy.net` hostname as an origin with a Host
   rewrite (path A).
 - Whether `requestRedirect.hostname` works on an `HTTPProxy` (path B).
-- Whether the GitHub App values reach the process on the unikernel workload.
 - The origin of image `v1.2.6`.

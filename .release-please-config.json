@@ -2,7 +2,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "datum.net",
+      "package-name": "milo-os.com",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
