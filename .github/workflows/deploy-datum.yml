@@ -3,17 +3,13 @@ name: Deploy Datum Compute
 # Builds the unikernel image (Dockerfile.unikraft) with `datumctl compute build`
 # and rolls it out to the milo-os-com workload in the datum-cloud project on
 # Datum Compute, on the unikernel runtime.
-# release-please.yml calls this workflow when it creates a release, so a release
-# tag deploys automatically. It can also be run by hand from the Actions tab.
+# Runs when a release is published, so a release tag deploys automatically, and
+# by hand from the Actions tab. Releases are created by hand in GitHub.
 # DNS is not managed here: the workload answers on its *.datumproxy.net URL.
 # See docs/datum-compute-migration.md.
 on:
-  workflow_call:
-    inputs:
-      tag:
-        description: Release tag to build and deploy, for example v1.2.6
-        type: string
-        required: true
+  release:
+    types: ['published']
   workflow_dispatch:
     inputs:
       project:
@@ -56,12 +52,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.tag || github.sha }}
+          ref: ${{ github.event.release.tag_name || github.sha }}
 
       - id: ref
         name: Name the image
         env:
-          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_TAG: ${{ github.event.release.tag_name }}
         run: |
           # Datum does not replace an instance when the image tag is unchanged,
           # so every deploy needs a new tag. Releases use their version tag.

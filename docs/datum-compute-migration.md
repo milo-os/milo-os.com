@@ -263,24 +263,17 @@ forces the order, and it means a short outage of HTTPS on `www`.
 
 ## After the move
 
-- CI: `release-please.yml` keeps a release PR open from the conventional commits
-  on `main`. Merging it creates the tag `vX.Y.Z` and calls `deploy-datum.yml`,
-  which builds `Dockerfile.unikraft` with `datumctl compute build`, pushes
-  `ghcr.io/milo-os/milo-os-com:vX.Y.Z-compute` and runs
-  `datumctl compute deploy milo-os-com --runtime-class unikernel` in
+- CI: publishing a GitHub release starts `deploy-datum.yml` (releases are created
+  by hand, as in `datum.net`). It builds `Dockerfile.unikraft` with
+  `datumctl compute build`, pushes `ghcr.io/milo-os/milo-os-com:vX.Y.Z-compute`
+  and runs `datumctl compute deploy milo-os-com --runtime-class unikernel` in
   `datum-cloud`. Everything not named in that command (the `milo-os-com-secrets`
   import, the allowed host) carries forward from the running workload. The deploy
   can also be run by hand from Actions, which tags the image `sha-<short sha>-compute`.
   The job logs in as a Datum service account whose credentials JSON is the
   `DATUM_SA_CREDENTIALS` secret of the `datum-compute` GitHub environment.
   Because the tag has the `-compute` suffix it never collides with the Kubernetes
-  image that `publish.yml` pushes.
-- A release created by `GITHUB_TOKEN` does not start `publish.yml` on
-  `release: published`. To keep publishing the version-tagged Kubernetes image
-  (the rollback target) on release, set the repository secret
-  `RELEASE_PLEASE_TOKEN` to a PAT or GitHub App token with `contents: write` and
-  `pull-requests: write`; `release-please.yml` uses it when present. The Compute
-  deploy does not depend on it.
+  image that `publish.yml` pushes on the same release.
 - Retire Kubernetes: remove the app from the infra repo, and the hostname entry
   `milo-os-com.prod.env.datum.net` in
   `infrastructure/envoy-gateway-system/gateways/external/production/kustomization.yaml`.
