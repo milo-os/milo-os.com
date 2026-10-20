@@ -276,8 +276,11 @@ forces the order, and it means a short outage of HTTPS on `www`.
   Because the tag has the `-compute` suffix it never collides with the Kubernetes
   image that `publish.yml` pushes.
 - A release created by `GITHUB_TOKEN` does not start `publish.yml` on
-  `release: published`, so the Kubernetes image is no longer published on release
-  unless release-please is given a PAT or GitHub App token.
+  `release: published`. To keep publishing the version-tagged Kubernetes image
+  (the rollback target) on release, set the repository secret
+  `RELEASE_PLEASE_TOKEN` to a PAT or GitHub App token with `contents: write` and
+  `pull-requests: write`; `release-please.yml` uses it when present. The Compute
+  deploy does not depend on it.
 - Retire Kubernetes: remove the app from the infra repo, and the hostname entry
   `milo-os-com.prod.env.datum.net` in
   `infrastructure/envoy-gateway-system/gateways/external/production/kustomization.yaml`.
