@@ -1,8 +1,8 @@
 name: Deploy Datum Compute
 
-# Builds the unikernel image (Dockerfile.unikraft) with `datumctl compute build`
-# and rolls it out to the milo-os-com workload in the datum-cloud project on
-# Datum Compute, on the unikernel runtime.
+# Builds the container image (Dockerfile) and rolls it out to the milo-os-com
+# workload in the datum-cloud project on Datum Compute, on the general-purpose
+# runtime.
 # Runs when a release is published, so a release tag deploys automatically, and
 # by hand from the Actions tab. Releases are created by hand in GitHub.
 # DNS is not managed here: the workload answers on its *.datumproxy.net URL.
@@ -31,8 +31,9 @@ concurrency:
 
 env:
   # Same GHCR package that publish.yml pushes the Kubernetes image to. It is
-  # public, so the workload pulls it anonymously. Unikernel images get a
-  # `-compute` tag suffix so they never collide with the Kubernetes image tags.
+  # public, so the workload pulls it anonymously. Compute images get a
+  # `-compute` tag suffix so they never collide with the Kubernetes image tags
+  # that publish.yml pushes on the same release.
   IMAGE_REPO: ghcr.io/milo-os/milo-os-com
   WORKLOAD: milo-os-com
   HTTP_PORT: 4321
@@ -89,10 +90,7 @@ jobs:
           datumctl login --credentials "$RUNNER_TEMP/datum-sa.json"
           rm -f "$RUNNER_TEMP/datum-sa.json"
 
-      # The default Docker driver cannot export an OCI image, so build with a
-      # docker-container BuildKit.
-      - id: buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
         with:
@@ -100,18 +98,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push the unikernel image
-        env:
-          IMAGE: ${{ steps.ref.outputs.image }}
-          BUILDER: ${{ steps.buildx.outputs.name }}
-        run: |
-          datumctl compute build \
-            --file Dockerfile.unikraft \
-            --buildkit-host "docker-container://buildx_buildkit_${BUILDER}0" \
-            --analyze \
-            --push \
-            --output "$IMAGE" \
-            .
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: production
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.ref.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # The workload pulls the image anonymously. A package that GHCR created
       # private on the first push must be made public once.
@@ -131,19 +128,19 @@ jobs:
           IMAGE: ${{ steps.ref.outputs.image }}
           LOCATION: ${{ inputs.location || 'us-central-1' }}
         run: |
-          # Same options as the running workload. HOST=:: is required: Datum
-          # networks are IPv6 only, and an IPv4-only socket starts but never
-          # answers. The runtime class cannot change after the workload exists.
-          # Every other setting (the milo-os-com-secrets import, the allowed host)
-          # carries forward from the running workload.
+          # HOST=:: is required: Datum networks are IPv6 only, and an IPv4-only
+          # socket starts but never answers. The runtime class cannot change after
+          # the workload exists. The GitHub App credentials come from the
+          # milo-os-com-secrets Secret (it must already exist in the project).
           datumctl compute deploy "$WORKLOAD" \
             --project "$DATUM_PROJECT" \
             --image "$IMAGE" \
             --location "$LOCATION" \
             --http-port "$HTTP_PORT" \
             --instance-type datumcloud/d1-standard-2 \
-            --runtime-class unikernel \
+            --runtime-class general-purpose \
             --env "HOST=::" \
+            --env-from-secret milo-os-com-secrets \
             --yes | tee "$RUNNER_TEMP/deploy.log"
           url="$(grep -oE 'https://[a-z0-9.-]+\.datumproxy\.net' "$RUNNER_TEMP/deploy.log" | tail -n 1)"
           echo "url=${url}" >> "$GITHUB_OUTPUT"
@@ -193,7 +190,7 @@ jobs:
           {
             echo "### Datum Compute"
             echo "- Project: \`$DATUM_PROJECT\`"
-            echo "- Workload: \`$WORKLOAD\` (unikernel)"
+            echo "- Workload: \`$WORKLOAD\` (general-purpose)"
             echo "- Image: \`${IMAGE:-none}\`"
             echo "- URL: ${URL:-none}"
           } >> "$GITHUB_STEP_SUMMARY"
