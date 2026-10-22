@@ -25,15 +25,15 @@ visitor -> milo-os.com  (A/AAAA to the same anycast addresses)
   -> HTTPRoute milo-os-com-redirect -> 301 https://www.milo-os.com
 ```
 
-| Item         | Value                                                                                                                                                     |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Domain       | `milo-os.com`, verified in Datum                                                                                                                          |
-| DNS zone     | `milo-os-com-28ke6x` (Datum DNS, nameservers `ns1`-`ns4.datumdomains.net`)                                                                                |
-| Apex records | `A 67.14.164.1`, `A 67.14.165.1`, `AAAA 2607:ed40:20::1`, `AAAA 2607:ed40:10::1`, TTL 60                                                                  |
-| `www` record | `CNAME chat-spot-v3mst.datumproxy.net.`, TTL 60                                                                                                           |
-| Gateway      | `milo-os-com-proxy`, namespace `milo-os-com`, 6 listeners (apex and `www` on 80 and 443, plus the platform hostname)                                      |
-| Origin       | `milo-os-com.prod.env.datum.net`, a record in **Google Cloud DNS** (delegated from `prod.env`), the Kubernetes production gateway shared with other sites |
-| Compute      | Workload `milo-os-com` (namespace `default`), unikernel, image `ghcr.io/milo-os/milo-os-com:v1.2.6`, URL `https://blend-heat-zcppf.datumproxy.net`        |
+| Item         | Value                                                                                                                                                            |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain       | `milo-os.com`, verified in Datum                                                                                                                                 |
+| DNS zone     | `milo-os-com-28ke6x` (Datum DNS, nameservers `ns1`-`ns4.datumdomains.net`)                                                                                       |
+| Apex records | `A 67.14.164.1`, `A 67.14.165.1`, `AAAA 2607:ed40:20::1`, `AAAA 2607:ed40:10::1`, TTL 60                                                                         |
+| `www` record | `CNAME chat-spot-v3mst.datumproxy.net.`, TTL 60                                                                                                                  |
+| Gateway      | `milo-os-com-proxy`, namespace `milo-os-com`, 6 listeners (apex and `www` on 80 and 443, plus the platform hostname)                                             |
+| Origin       | `milo-os-com.prod.env.datum.net`, a record in **Google Cloud DNS** (delegated from `prod.env`), the Kubernetes production gateway shared with other sites        |
+| Compute      | Workload `milo-os-com` (namespace `default`), general-purpose, image `ghcr.io/milo-os/milo-os-com:<tag>-compute`, URL `https://niche-thank-mktw3.datumproxy.net` |
 
 Things to know:
 
@@ -51,7 +51,10 @@ Things to know:
   change the live origin.
 - DNS for this zone is under Git:
   `apps/milo-os-com/datum-cloud/dnsrecordsets.yaml` in the infra repo.
-- The unikernel workload answered 200 on 12 of 12 requests on 2026-10-20.
+- The workload first ran on the unikernel runtime. It broke when the tag
+  `v1.2.6` was overwritten by the Kubernetes image (see the Pitfalls), and on
+  2026-10-22 it was destroyed and redeployed on **general-purpose**. The URL
+  changed from `blend-heat-zcppf.datumproxy.net` to the one above.
 
 ## Pick a path
 
@@ -80,14 +83,14 @@ None of these steps touches production.
    `process.env` only, and uses them for the roadmap and changelog; both show
    real GitHub data on Compute. `CACHE_CLEAR_SECRET` (used by `/api/cache-clear`)
    is not in the Compute Secret.
-2. **Image.** `v1.2.6` exists in GHCR but is not a git tag or a release (latest
-   is `v1.2.5`), and nothing records where it was built. Build the image from a
-   tag in CI before the cutover, and deploy that.
+2. **Image.** CI builds the image from the release tag (see _After the move_).
+   Never deploy a tag that `publish.yml` also writes: `v1.2.6` was overwritten by
+   the Kubernetes image and the instance could no longer start.
 3. **Content parity.** The Compute build differs from production (different
    asset hashes, a `Card` island where production has `RoadmapCard`). Compare:
 
    ```bash
-   C=blend-heat-zcppf.datumproxy.net
+   C=niche-thank-mktw3.datumproxy.net
    IP=$(dig +short AAAA $C @1.1.1.1 | head -1)
    for p in / /roadmap/ /changelog/ /sitemap-index.xml /robots.txt; do
      a=$(curl -s -m 25 https://www.milo-os.com$p | md5 -q)
@@ -141,7 +144,7 @@ from the Kubernetes gateway to the Compute workload's load balancer.
        port: 443
    endpoints:
      - addresses:
-         - "blend-heat-zcppf.datumproxy.net"
+         - "niche-thank-mktw3.datumproxy.net"
        conditions:
          ready: true
    EOF
@@ -164,7 +167,7 @@ from the Kubernetes gateway to the Compute workload's load balancer.
      {"op":"test","path":"/spec/rules/0/backendRefs/0/name","value":"milo-os-com"},
      {"op":"test","path":"/spec/rules/0/filters/0/urlRewrite/hostname","value":"milo-os-com.prod.env.datum.net"},
      {"op":"replace","path":"/spec/rules/0/backendRefs/0/name","value":"milo-os-com-compute"},
-     {"op":"replace","path":"/spec/rules/0/filters/0/urlRewrite/hostname","value":"blend-heat-zcppf.datumproxy.net"}]'
+     {"op":"replace","path":"/spec/rules/0/filters/0/urlRewrite/hostname","value":"niche-thank-mktw3.datumproxy.net"}]'
    ```
 
 4. **Verify** for several minutes:
@@ -197,7 +200,7 @@ forces the order, and it means a short outage of HTTPS on `www`.
 1. **Capture** the live objects (see above).
 2. **Prepare the Compute side without hostnames yet.** The workload's load
    balancer is the `HTTPProxy` `milo-os-com` in `default`. Check that it serves on
-   `blend-heat-zcppf.datumproxy.net`.
+   `niche-thank-mktw3.datumproxy.net`.
 3. **Plan the apex redirect.** Today the Gateway redirects the apex to `www`.
    An `HTTPProxy` can return a `RequestRedirect` with no backend (Datum docs,
    "HTTP to HTTPS Redirect with HTTPProxy"). Create a second `HTTPProxy` for
@@ -244,6 +247,19 @@ forces the order, and it means a short outage of HTTPS on `www`.
 
 ## Pitfalls
 
+- **Adding a hostname that another Gateway holds breaks the proxy.** On
+  2026-10-21 `www.milo-os.com` was added to the HTTPProxy of the workload while
+  the Gateway `milo-os-com-proxy` still held it. The hostname showed `InUse`, the
+  proxy went to `Programmed=False` (`ListenersNotValid`) and the generated URL
+  answered 503, also after the hostname was removed again. Free the hostname
+  first (path B), do not stage it.
+- **A tag that two workflows write is not safe to deploy.** `publish.yml` pushes
+  the Kubernetes image to `v1.2.6` on every release, over the image the workload
+  was running. After a restart the instance failed with `ImageUnavailable`
+  (`could not be pulled anonymously`), and a failed instance blocks the rollout
+  because the placement is `OrderedReady`. The deploy waited until the job timed
+  out. Compute images use their own `-compute` tags.
+
 - **Do not click "Protect with ALB" on a production record in the console.** It
   creates an `HTTPProxy` for that hostname with the CNAME target as its origin. It
   stays inactive while another Gateway holds the hostname, but it counts against
@@ -264,16 +280,17 @@ forces the order, and it means a short outage of HTTPS on `www`.
 ## After the move
 
 - CI: publishing a GitHub release starts `deploy-datum.yml` (releases are created
-  by hand, as in `datum.net`). It builds `Dockerfile.unikraft` with
-  `datumctl compute build`, pushes `ghcr.io/milo-os/milo-os-com:vX.Y.Z-compute`
-  and runs `datumctl compute deploy milo-os-com --runtime-class unikernel` in
-  `datum-cloud`. Everything not named in that command (the `milo-os-com-secrets`
-  import, the allowed host) carries forward from the running workload. The deploy
-  can also be run by hand from Actions, which tags the image `sha-<short sha>-compute`.
-  The job logs in as a Datum service account whose credentials JSON is the
-  `DATUM_SA_CREDENTIALS` secret of the `datum-compute` GitHub environment.
-  Because the tag has the `-compute` suffix it never collides with the Kubernetes
-  image that `publish.yml` pushes on the same release.
+  by hand, as in `datum.net`). It builds the regular `Dockerfile` (`production`
+  stage), pushes `ghcr.io/milo-os/milo-os-com:vX.Y.Z-compute` and runs
+  `datumctl compute deploy milo-os-com --runtime-class general-purpose` in
+  `datum-cloud`, with `HOST=::` and the Secret `milo-os-com-secrets` imported by
+  `--env-from-secret` (the Secret must already exist). It then checks the
+  workload and requests the generated URL. The deploy can also be run by hand
+  from Actions, which tags the image `sha-<short sha>-compute`. The job logs in as
+  a Datum service account whose credentials JSON is the `DATUM_SA_CREDENTIALS`
+  secret of the `datum-compute` GitHub environment. Because the tag has the
+  `-compute` suffix it never collides with the Kubernetes image that
+  `publish.yml` pushes on the same release.
 - Retire Kubernetes: remove the app from the infra repo, and the hostname entry
   `milo-os-com.prod.env.datum.net` in
   `infrastructure/envoy-gateway-system/gateways/external/production/kustomization.yaml`.
@@ -286,4 +303,3 @@ forces the order, and it means a short outage of HTTPS on `www`.
 - That the Gateway accepts a `datumproxy.net` hostname as an origin with a Host
   rewrite (path A).
 - Whether `requestRedirect.hostname` works on an `HTTPProxy` (path B).
-- The origin of image `v1.2.6`.
