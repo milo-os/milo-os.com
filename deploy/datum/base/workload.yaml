@@ -11,7 +11,7 @@ spec:
         sandbox:
           containers:
             - name: app
-              image: index.unikraft.io/datum/milo-os-com:slim
+              image: ghcr.io/milo-os/milo-os-com:v1.2.6
               env:
                 - name: NODE_ENV
                   value: production

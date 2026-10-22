@@ -1,8 +1,8 @@
 # Datum Cloud deployment for milo-os.com
 
 Kustomize program that deploys the milo-os.com website as a Datum Cloud compute
-`Workload` (`compute.datumapis.com/v1alpha`). The Workload runs the Unikraft
-unikernel image and sources the GitHub App credentials from a Kubernetes Secret
+`Workload` (`compute.datumapis.com/v1alpha`). The Workload runs the container
+image from GHCR and sources the GitHub App credentials from a Kubernetes Secret
 **by reference only**.
 
 ```
