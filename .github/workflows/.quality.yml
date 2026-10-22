@@ -107,7 +107,9 @@ jobs:
         uses: docker/build-push-action@v7.1.0
         with:
           context: .
-          push: true
+          # Build only. publish.yml publishes the image; pushing here overwrote
+          # its multi-platform index (and attestations) with a single manifest.
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           target: production
