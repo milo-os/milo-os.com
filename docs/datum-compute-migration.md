@@ -310,7 +310,10 @@ forces the order, and it means a short outage of HTTPS on `www`.
   a Datum service account whose credentials JSON is the `DATUM_SA_CREDENTIALS`
   secret of the `datum-compute` GitHub environment. Because the tag has the
   `-compute` suffix it never collides with the Kubernetes image that
-  `publish.yml` pushes on the same release.
+  `publish.yml` pushes on the same release. `Dockerfile.datum` is the unikernel
+  variant (`datumctl compute build` picks it up when it exists, and it passes
+  `--analyze`); CI does not use it, because the unikernel runtime was not
+  reliable through the public URL.
 - Retire Kubernetes: remove the app from the infra repo, and the hostname entry
   `milo-os-com.prod.env.datum.net` in
   `infrastructure/envoy-gateway-system/gateways/external/production/kustomization.yaml`.
