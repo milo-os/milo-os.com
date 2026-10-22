@@ -55,6 +55,20 @@ Things to know:
   `v1.2.6` was overwritten by the Kubernetes image (see the Pitfalls), and on
   2026-10-22 it was destroyed and redeployed on **general-purpose**. The URL
   changed from `blend-heat-zcppf.datumproxy.net` to the one above.
+- Status on 2026-10-22, **before the Gateway is released**:
+  - the `www` CNAME was changed by the domain owner to
+    `niche-thank-mktw3.datumproxy.net`;
+  - `www.milo-os.com` is already on the HTTPProxy `milo-os-com` and
+    `milo-os.com` is on the HTTPProxy `milo-os-com-apex-redirect`
+    (`whimsy-greet-gs7c3.datumproxy.net`); both show `InUse`;
+  - visitors still get the Kubernetes site, from the Gateway (`last-modified`
+    and `etag` match the Kubernetes origin, the certificate is the Gateway's
+    `CN=www.milo-os.com`);
+  - the platform lists `ALIAS milo-os.com` as `Missing` (`managedBy: User`). The
+    apex records `A 67.14.164.1`, `A 67.14.165.1`, `AAAA 2607:ed40:20::1`,
+    `AAAA 2607:ed40:10::1` are the ones `alt-cloud.org` has for an `ALIAS` that
+    the platform reports as `Present`, so the apex records probably stay. Not
+    verified: whether `Missing` blocks the apex certificate.
 
 ## Pick a path
 
@@ -207,6 +221,9 @@ forces the order, and it means a short outage of HTTPS on `www`.
    `milo-os.com` with a rule like this one. **Untested:** the docs example
    redirects to the same host over HTTPS; setting `hostname: www.milo-os.com` on
    `requestRedirect` follows the Gateway API but is not in the docs example.
+   **Applied on 2026-10-22** from `deploy/datum/apex-redirect.yaml`. It shows
+   `HostnameInUse` until the Gateway lets go of `milo-os.com`, and it did not
+   change the live apex (`301` to `www`, served by the Gateway).
 
    ```yaml
    apiVersion: networking.datumapis.com/v1alpha
@@ -233,7 +250,8 @@ forces the order, and it means a short outage of HTTPS on `www`.
 4. **Free the hostnames:** delete `Gateway/milo-os-com-proxy` in `milo-os-com`.
    HTTPS on `www` is down from here.
 5. **Attach the hostnames:** add `www.milo-os.com` to the `spec.hostnames` of the
-   `milo-os-com` HTTPProxy, and apply the apex redirect proxy.
+   `milo-os-com` HTTPProxy, and apply the apex redirect proxy. Both were already
+   done on 2026-10-22 and wait in `InUse` for step 4.
 6. **Point DNS at it.** Open a PR in the infra repo that changes the `www` CNAME in
    `apps/milo-os-com/datum-cloud/dnsrecordsets.yaml` to the new load balancer's
    generated hostname. The apex records stay. Read what the platform expects from
@@ -247,12 +265,14 @@ forces the order, and it means a short outage of HTTPS on `www`.
 
 ## Pitfalls
 
-- **Adding a hostname that another Gateway holds breaks the proxy.** On
-  2026-10-21 `www.milo-os.com` was added to the HTTPProxy of the workload while
-  the Gateway `milo-os-com-proxy` still held it. The hostname showed `InUse`, the
-  proxy went to `Programmed=False` (`ListenersNotValid`) and the generated URL
-  answered 503, also after the hostname was removed again. Free the hostname
-  first (path B), do not stage it.
+- **Adding a hostname that another Gateway holds leaves the proxy unprogrammed.**
+  `www.milo-os.com` was added to the HTTPProxy of the workload on 2026-10-21 and
+  again on 2026-10-22, while the Gateway `milo-os-com-proxy` still held it. The
+  hostname shows `InUse` and the proxy goes to `Programmed=False`
+  (`ListenersNotValid`). On the **unikernel** workload the generated URL answered
+  503 and stayed that way after the hostname was removed. On the
+  **general-purpose** workload the generated URL kept answering 200 for the
+  5 minutes we watched. The hostname stays inactive until the Gateway lets go.
 - **A tag that two workflows write is not safe to deploy.** `publish.yml` pushes
   the Kubernetes image to `v1.2.6` on every release, over the image the workload
   was running. After a restart the instance failed with `ImageUnavailable`

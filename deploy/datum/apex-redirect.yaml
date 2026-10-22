@@ -1,0 +1,20 @@
+apiVersion: networking.datumapis.com/v1alpha
+kind: HTTPProxy
+metadata:
+  name: milo-os-com-apex-redirect
+  namespace: default
+spec:
+  hostnames:
+    - milo-os.com
+  rules:
+    - name: redirect-to-www
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            hostname: www.milo-os.com
+            scheme: https
+            statusCode: 301
