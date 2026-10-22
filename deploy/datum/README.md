@@ -1,9 +1,11 @@
 # Datum Cloud deployment for milo-os.com
 
 Kustomize program that deploys the milo-os.com website as a Datum Cloud compute
-`Workload` (`compute.datumapis.com/v1alpha`). The Workload runs the Unikraft
-unikernel image and sources the GitHub App credentials from a Kubernetes Secret
-**by reference only**.
+`Workload` (`compute.datumapis.com/v1alpha`) on the general-purpose runtime. The
+Workload imports the GitHub App credentials from a Secret **by reference only**.
+It mirrors the live workload `milo-os-com` in `datum-cloud`; CI
+(`.github/workflows/deploy-datum.yml`) deploys with `datumctl compute deploy`
+flags and does not use this program.
 
 ```
 deploy/datum/
@@ -24,8 +26,8 @@ deploy/datum/
 This program does **not** create or contain any secret. It expects a Secret
 named `milo-os-com-secrets` to **already exist** in the target project's
 `default` namespace, with keys `APP_ID`, `APP_INSTALLATION_ID`, and
-`APP_PRIVATE_KEY`. The Workload references those keys as environment variables
-via `valueFrom.secretKeyRef`.
+`APP_PRIVATE_KEY`. The Workload imports every key of the Secret as environment
+variables with `envFrom`.
 
 Create the Secret from your secret manager (Vault, 1Password, SOPS, External
 Secrets Operator, ...) before deploying. `secret.example.yaml` is a template you
@@ -70,7 +72,6 @@ Each overlay pins:
   the non-standard CRD path `spec/template/spec/runtime/sandbox/containers[]/image`,
   so `base/kustomizeconfig/images.yaml` registers a FieldSpec teaching the
   built-in transformer to find it on `kind: Workload`.
-- **`SITE_URL`** — patched per overlay (staging uses `https://www.milo-os.com/`).
 
 ## Secrets are not part of this program
 

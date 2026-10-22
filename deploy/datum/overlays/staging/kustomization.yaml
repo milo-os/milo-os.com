@@ -5,14 +5,5 @@ resources:
   - ../../base
 
 images:
-  - name: index.unikraft.io/datum/milo-os-com
-    newTag: slim
-
-patches:
-  - target:
-      kind: Workload
-      name: milo-os-com
-    patch: |
-      - op: replace
-        path: /spec/template/spec/runtime/sandbox/containers/0/env/2/value
-        value: "https://www.milo-os.com/"
+  - name: ghcr.io/milo-os/milo-os-com
+    newTag: latest-compute

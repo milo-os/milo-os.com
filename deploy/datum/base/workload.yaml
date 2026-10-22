@@ -6,45 +6,35 @@ spec:
   template:
     spec:
       runtime:
+        class: general-purpose
         resources:
           instanceType: datumcloud/d1-standard-2
         sandbox:
           containers:
             - name: app
-              image: index.unikraft.io/datum/milo-os-com:slim
+              image: ghcr.io/milo-os/milo-os-com:latest-compute
               env:
-                - name: NODE_ENV
-                  value: production
-                - name: PORT
-                  value: "4321"
-                - name: SITE_URL
-                  value: "https://www.milo-os.com/"
-                - name: APP_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: milo-os-com-secrets
-                      key: APP_ID
-                - name: APP_INSTALLATION_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: milo-os-com-secrets
-                      key: APP_INSTALLATION_ID
-                - name: APP_PRIVATE_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: milo-os-com-secrets
-                      key: APP_PRIVATE_KEY
+                # Datum networks are IPv6 only: an IPv4-only socket never answers.
+                - name: HOST
+                  value: "::"
+              envFrom:
+                - secretRef:
+                    name: milo-os-com-secrets
               ports:
                 - name: http
                   port: 4321
                   protocol: TCP
       networkInterfaces:
-        - network:
+        - name: eth0
+          network:
             name: default
+          ipFamilies:
+            - IPv6
+          reclaimPolicy: Delete
   placements:
-    - name: us
-      cityCodes:
-        - DFW
+    - name: default
+      locations:
+        - name: us-central-1
       scaleSettings:
         minReplicas: 1
         instanceManagementPolicy: OrderedReady

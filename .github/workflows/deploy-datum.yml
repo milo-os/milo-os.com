@@ -1,0 +1,193 @@
+name: Deploy Datum Compute
+
+# Builds the container image (Dockerfile) and rolls it out to the milo-os-com
+# workload in the datum-cloud project on Datum Compute, on the general-purpose
+# runtime.
+# Runs when a release is published, so a release tag deploys automatically, and
+# by hand from the Actions tab. Releases are created by hand in GitHub.
+# DNS is not managed here: the workload answers on its *.datumproxy.net URL.
+# See docs/datum-compute-migration.md.
+on:
+  release:
+    types: ['published']
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Datum project ID (falls back to the DATUM_PROJECT repo variable)
+        default: datum-cloud
+      location:
+        description: Datum Compute location
+        default: us-central-1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: datum-compute
+  cancel-in-progress: false
+
+env:
+  # Same GHCR package that publish.yml pushes the Kubernetes image to. It is
+  # public, so the workload pulls it anonymously. Compute images get a
+  # `-compute` tag suffix so they never collide with the Kubernetes image tags
+  # that publish.yml pushes on the same release.
+  IMAGE_REPO: ghcr.io/milo-os/milo-os-com
+  WORKLOAD: milo-os-com
+  HTTP_PORT: 4321
+  DATUMCTL_VERSION: 0.23.0
+  COMPUTE_PLUGIN_VERSION: v0.12.10
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # packages: write pushes the image to GHCR with the job token.
+    permissions:
+      contents: read
+      packages: write
+    environment:
+      name: datum-compute
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      DATUM_PROJECT: ${{ inputs.project || vars.DATUM_PROJECT || 'datum-cloud' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name || github.sha }}
+
+      - id: ref
+        name: Name the image
+        env:
+          INPUT_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          # Datum does not replace an instance when the image tag is unchanged,
+          # so every deploy needs a new tag. Releases use their version tag.
+          tag="${INPUT_TAG:-sha-${GITHUB_SHA::7}}"
+          echo "tag=${tag}-compute" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE_REPO}:${tag}-compute" >> "$GITHUB_OUTPUT"
+
+      - name: Install datumctl
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/datumctl.deb" \
+            "https://github.com/datum-cloud/datumctl/releases/download/v${DATUMCTL_VERSION}/datumctl_${DATUMCTL_VERSION}_linux_amd64.deb"
+          sudo dpkg -i "$RUNNER_TEMP/datumctl.deb"
+          # The plugin download is large and has a fixed client timeout.
+          for attempt in 1 2 3; do
+            datumctl plugin install "compute@${COMPUTE_PLUGIN_VERSION}" && break
+            [ "$attempt" = 3 ] && { echo "::error::could not install the compute plugin"; exit 1; }
+            sleep 10
+          done
+
+      - name: Log in to Datum Cloud
+        env:
+          DATUM_SA_CREDENTIALS: ${{ secrets.DATUM_SA_CREDENTIALS }}
+        run: |
+          umask 077
+          printf '%s' "$DATUM_SA_CREDENTIALS" > "$RUNNER_TEMP/datum-sa.json"
+          datumctl login --credentials "$RUNNER_TEMP/datum-sa.json"
+          rm -f "$RUNNER_TEMP/datum-sa.json"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: production
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.ref.outputs.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The workload pulls the image anonymously. A package that GHCR created
+      # private on the first push must be made public once.
+      - name: Check the image is public
+        env:
+          IMAGE: ${{ steps.ref.outputs.image }}
+        run: |
+          docker logout ghcr.io
+          docker buildx imagetools inspect "$IMAGE" >/dev/null 2>&1 || {
+            echo "::error::$IMAGE cannot be pulled anonymously. Make the GHCR package public: https://github.com/orgs/milo-os/packages/container/milo-os-com/settings"
+            exit 1
+          }
+
+      - name: Deploy
+        id: deploy
+        env:
+          IMAGE: ${{ steps.ref.outputs.image }}
+          LOCATION: ${{ inputs.location || 'us-central-1' }}
+        run: |
+          # HOST=:: is required: Datum networks are IPv6 only, and an IPv4-only
+          # socket starts but never answers. The runtime class cannot change after
+          # the workload exists. The GitHub App credentials come from the
+          # milo-os-com-secrets Secret (it must already exist in the project).
+          datumctl compute deploy "$WORKLOAD" \
+            --project "$DATUM_PROJECT" \
+            --image "$IMAGE" \
+            --location "$LOCATION" \
+            --http-port "$HTTP_PORT" \
+            --instance-type datumcloud/d1-standard-2 \
+            --runtime-class general-purpose \
+            --env "HOST=::" \
+            --env-from-secret milo-os-com-secrets \
+            --yes | tee "$RUNNER_TEMP/deploy.log"
+          url="$(grep -oE 'https://[a-z0-9.-]+\.datumproxy\.net' "$RUNNER_TEMP/deploy.log" | tail -n 1)"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+      - name: Check the workload
+        env:
+          TAG: ${{ steps.ref.outputs.tag }}
+        run: |
+          # The workload must now run the image this run meant to deploy.
+          datumctl get workload "$WORKLOAD" -n default --project "$DATUM_PROJECT" -o json |
+            jq -e --arg ref ":${TAG}" '[.. | .image? | strings] | any(endswith($ref))' >/dev/null || {
+              echo "::error::workload $WORKLOAD is not running the $TAG image"
+              exit 1
+            }
+          # A new instance can take a few minutes to become available.
+          for i in $(seq 1 20); do
+            datumctl get workload "$WORKLOAD" -n default --project "$DATUM_PROJECT" -o json |
+              jq -e '.status.conditions[] | select(.type == "Available") | .status == "True"' >/dev/null && exit 0
+            echo "attempt $i: $WORKLOAD is not Available yet"
+            sleep 15
+          done
+          echo "::error::workload $WORKLOAD is not Available"
+          exit 1
+
+      - name: Smoke test
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          [ -n "$URL" ] || { echo "::error::deploy printed no URL"; exit 1; }
+          # The URL's DNS can lag the rollout, and the edge may answer 503 for a
+          # few minutes after an instance is replaced, so retry before failing.
+          for i in $(seq 1 20); do
+            code="$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$URL/" || true)"
+            echo "attempt $i: GET / -> ${code:-000}"
+            [ "$code" = 200 ] && exit 0
+            sleep 15
+          done
+          echo "::error::$URL did not return 200 within 5 minutes"
+          exit 1
+
+      - name: Summary
+        if: always()
+        env:
+          IMAGE: ${{ steps.ref.outputs.image }}
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          {
+            echo "### Datum Compute"
+            echo "- Project: \`$DATUM_PROJECT\`"
+            echo "- Workload: \`$WORKLOAD\` (general-purpose)"
+            echo "- Image: \`${IMAGE:-none}\`"
+            echo "- URL: ${URL:-none}"
+          } >> "$GITHUB_STEP_SUMMARY"
