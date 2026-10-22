@@ -8,6 +8,9 @@ name: Deploy Datum Compute
 # DNS is not managed here: the workload answers on its *.datumproxy.net URL.
 # See docs/datum-compute-migration.md.
 on:
+  # TEMPORARY: test from the PR branch before merging. Remove before merge.
+  push:
+    branches: [ci/deploy-datum-compute]
   release:
     types: ['published']
   workflow_dispatch:
