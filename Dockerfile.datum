@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1
-# Builds the rootfs for the milo-os.com Unikraft unikernel (FROM scratch).
-# Entrypoint is set by the Kraftfile cmd.
+# Builds the rootfs for the milo-os.com unikernel image, deployed on Datum
+# Compute's unikernel runtime class. Built and validated with
+# `datumctl compute build` (this file's default discovery name).
 
-# amd64 pin: base-compat is x86_64, so the node binary + musl libs must be x86_64
-# (build host may be arm64; BuildKit cross-builds via qemu).
+# amd64 pin: the unikernel runtime is x86_64, so the node binary + musl libs
+# must be x86_64 (build host may be arm64; BuildKit cross-builds via qemu).
 FROM --platform=linux/amd64 node:22-alpine AS build
 WORKDIR /usr/src
 
@@ -32,10 +33,9 @@ RUN node_modules/.bin/esbuild server.mjs \
       --packages=bundle \
       '--banner:js=import { createRequire as __cr } from "node:module"; const require = __cr(import.meta.url);'
 
-RUN echo "=== ldd node ===" && ldd /usr/local/bin/node || true
-
 FROM scratch
 COPY --from=build /usr/local/bin/node /usr/bin/node
+COPY --from=build /lib/libc.musl-x86_64.so.1 /lib/libc.musl-x86_64.so.1
 COPY --from=build /lib/ld-musl-x86_64.so.1 /lib/ld-musl-x86_64.so.1
 COPY --from=build /usr/lib/libgcc_s.so.1 /usr/lib/libgcc_s.so.1
 COPY --from=build /usr/lib/libstdc++.so.6 /usr/lib/libstdc++.so.6

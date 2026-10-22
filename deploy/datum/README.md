@@ -1,9 +1,14 @@
 # Datum Cloud deployment for milo-os.com
 
 Kustomize program that deploys the milo-os.com website as a Datum Cloud compute
-`Workload` (`compute.datumapis.com/v1alpha`). The Workload runs the Unikraft
-unikernel image and sources the GitHub App credentials from a Kubernetes Secret
-**by reference only**.
+`Workload` (`compute.datumapis.com/v1alpha`). The Workload runs on the
+**unikernel** runtime class (`spec.template.spec.runtime.class`) and sources
+the GitHub App credentials from a Kubernetes Secret **by reference only**.
+
+The image is built from `Dockerfile.datum` at the repo root with
+`datumctl compute build` (see `../../.github/workflows/publish.yml`), which
+validates unikernel compatibility (`--analyze`) before publishing to
+`ghcr.io/milo-os/milo-os-com`.
 
 ```
 deploy/datum/
@@ -22,10 +27,10 @@ deploy/datum/
 ## Prerequisite: the Secret must already exist
 
 This program does **not** create or contain any secret. It expects a Secret
-named `milo-os-com-secrets` to **already exist** in the target project's
-`default` namespace, with keys `APP_ID`, `APP_INSTALLATION_ID`, and
-`APP_PRIVATE_KEY`. The Workload references those keys as environment variables
-via `valueFrom.secretKeyRef`.
+named `milo-os-com` to **already exist** in the target project's `default`
+namespace, with keys `APP_ID`, `APP_INSTALLATION_ID`, and `APP_PRIVATE_KEY`.
+The Workload references those keys as environment variables via
+`valueFrom.secretKeyRef`.
 
 Create the Secret from your secret manager (Vault, 1Password, SOPS, External
 Secrets Operator, ...) before deploying. `secret.example.yaml` is a template you

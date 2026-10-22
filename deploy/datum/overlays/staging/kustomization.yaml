@@ -5,8 +5,8 @@ resources:
   - ../../base
 
 images:
-  - name: index.unikraft.io/datum/milo-os-com
-    newTag: slim
+  - name: ghcr.io/milo-os/milo-os-com
+    newTag: v1.2.5
 
 patches:
   - target:
