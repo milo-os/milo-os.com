@@ -16,7 +16,7 @@ jobs:
       id-token: write
       contents: read
       packages: write
-    uses: datum-cloud/actions/.github/workflows/publish-docker.yaml@v1.24.0
+    uses: datum-cloud/actions/.github/workflows/publish-docker.yaml@v1.26.0
     with:
       registry-organization: milo-os
       image-name: milo-os-com
@@ -28,7 +28,7 @@ jobs:
       id-token: write
       contents: read
       packages: write
-    uses: datum-cloud/actions/.github/workflows/publish-kustomize-bundle.yaml@v1.24.0
+    uses: datum-cloud/actions/.github/workflows/publish-kustomize-bundle.yaml@v1.26.0
     with:
       bundle-name: ghcr.io/milo-os/milo-os-com-kustomize
       bundle-path: config
