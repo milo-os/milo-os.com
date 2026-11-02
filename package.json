@@ -5,21 +5,21 @@
   "scripts": {
     "dev:astro": "astro dev --host --typecheck",
     "build:astro": "astro check --skip-playwright && astro build",
-    "dev": "bun run dev:astro",
-    "build": "bun run build:astro",
-    "start": "bun ./server.mjs",
-    "start:original": "bun ./dist/server/entry.mjs",
+    "dev": "npm run dev:astro",
+    "build": "npm run build:astro",
+    "start": "node ./server.mjs",
+    "start:original": "node ./dist/server/entry.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.astro,.md,.mdx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx,.astro,.md,.mdx --fix",
-    "lint:md": "bunx markdownlint-cli \"src/content/**/*.{md,mdx}\"",
-    "lint:md:fix": "bunx markdownlint-cli \"src/content/**/*.{md,mdx}\" --fix",
+    "lint:md": "markdownlint \"src/content/**/*.{md,mdx}\"",
+    "lint:md:fix": "markdownlint \"src/content/**/*.{md,mdx}\" --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,astro,md,mdx,json,css,scss}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,astro,md,mdx,json,css,scss}\"",
     "prepare": "husky",
     "typecheck": "astro check",
-    "precommit": "bun run typecheck && bun run lint && bun run lint:md && bun run lint:md:fix && bun run format && bun run format:check"
+    "precommit": "npm run typecheck && npm run lint && npm run lint:md && npm run lint:md:fix && npm run format && npm run format:check"
   },
   "dependencies": {
     "@astrojs/alpinejs": "1.0.0",

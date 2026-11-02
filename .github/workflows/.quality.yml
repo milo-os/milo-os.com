@@ -17,7 +17,6 @@ concurrency:
 
 env:
   NODE_ENV: production
-  BUN_CACHE: ~/.bun/install/cache
 
 jobs:
   install:
@@ -26,23 +25,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v7
         with:
-          bun-version: latest
-
-      - name: Cache Dependencies
-        id: cache-deps
-        uses: actions/cache@v5
-        with:
-          path: |
-            ${{ env.BUN_CACHE }}
-            **/node_modules
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lock', '**/package.json') }}
+          node-version-file: .nvmrc
+          cache: npm
 
       - name: Install Dependencies
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: bun install
+        run: npm ci --include=dev
 
   lint:
     needs: install
@@ -52,21 +42,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v7
         with:
-          bun-version: latest
+          node-version-file: .nvmrc
+          cache: npm
 
-      - name: Restore Cache
-        uses: actions/cache@v5
-        with:
-          path: |
-            ${{ env.BUN_CACHE }}
-            **/node_modules
-          key: ${{ runner.os }}-deps-${{ hashFiles('**/bun.lock', '**/package.json') }}
+      - name: Install Dependencies
+        run: npm ci --include=dev
 
       - name: Run Lint
-        run: bun run lint
+        run: npm run lint
 
   build-and-push:
     permissions:
