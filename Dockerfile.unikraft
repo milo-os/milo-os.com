@@ -4,12 +4,12 @@
 
 # amd64 pin: base-compat is x86_64, so the node binary + musl libs must be x86_64
 # (build host may be arm64; BuildKit cross-builds via qemu).
-FROM --platform=linux/amd64 node:26.13.0-alpine AS build
+FROM --platform=linux/amd64 node:26.13.0-alpine3.24@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS build
 WORKDIR /usr/src
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm install \
+    npm ci \
       --fetch-retries=8 \
       --fetch-retry-factor=2 \
       --fetch-retry-mintimeout=20000 \
@@ -18,8 +18,7 @@ RUN --mount=type=cache,target=/root/.npm \
 
 COPY . .
 
-# node:22-alpine has no bun; invoke the Astro toolchain directly.
-RUN npx astro check --skip-playwright && npx astro build
+RUN npm run build
 
 # Bundle server.mjs + its deps into one self-contained ESM file. It must live in
 # dist/server/ so the @astrojs/node adapter resolves dist/client as ../client.

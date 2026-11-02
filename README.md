@@ -13,23 +13,23 @@ This repository contains the public marketing website for Milo. It is built as a
 - [Astro](https://astro.build/) 6 with MDX content
 - [Tailwind CSS](https://tailwindcss.com/) 4
 - [Alpine.js](https://alpinejs.dev/) for client-side interactivity
-- [Bun](https://bun.sh/) for development and production runtime
+- [Node.js](https://nodejs.org/) 26 and npm for development and production runtime
 
-The site is pre-rendered to static HTML and served by a custom Bun server in [server.mjs](server.mjs), which handles static assets, compressed responses, and middleware for dynamic routes.
+The site is pre-rendered to static HTML and served by a custom Node server in [server.mjs](server.mjs), which handles static assets, compressed responses, and middleware for dynamic routes.
 
 ## Getting started
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/) 1.3+
+- [Node.js](https://nodejs.org/) 26 (see [.nvmrc](.nvmrc)) with npm
 - A local environment file copied from [.env.example](.env.example)
 
 ### Install and run locally
 
 ```sh
-bun install
+npm ci
 cp .env.example .env
-bun run dev
+npm run dev
 ```
 
 The development server will be available at [http://localhost:4321](http://localhost:4321).
@@ -48,14 +48,14 @@ docker compose up prod
 
 | Command | Purpose |
 | :------ | :----- |
-| `bun run dev` | Start the Astro dev server with type checking |
-| `bun run build` | Type-check and build the site to `./dist/` |
-| `bun run start` | Start the production server from [server.mjs](server.mjs) |
-| `bun run preview` | Preview the built site locally |
-| `bun run typecheck` | Run Astro type checks |
-| `bun run lint` | Lint JavaScript, TypeScript, Astro, and MD/MDX files |
-| `bun run lint:md` | Lint MDX content |
-| `bun run format` | Format supported source files |
+| `npm run dev` | Start the Astro dev server with type checking |
+| `npm run build` | Type-check and build the site to `./dist/` |
+| `npm run start` | Start the production server from [server.mjs](server.mjs) |
+| `npm run preview` | Preview the built site locally |
+| `npm run typecheck` | Run Astro type checks |
+| `npm run lint` | Lint JavaScript, TypeScript, Astro, and MD/MDX files |
+| `npm run lint:md` | Lint MDX content |
+| `npm run format` | Format supported source files |
 
 ## Environment variables
 
@@ -100,9 +100,9 @@ The app reads configuration from [.env.example](.env.example). The most importan
 Before opening a pull request, run the relevant checks locally:
 
 ```sh
-bun run typecheck
-bun run lint
-bun run format
+npm run typecheck
+npm run lint
+npm run format
 ```
 
 ## Deployment

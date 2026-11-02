@@ -190,17 +190,36 @@ const server = createServer((req, res) => {
   });
 });
 
+server.keepAliveTimeout = 75_000;
+server.headersTimeout = 76_000;
+
 server.on('error', (err) => {
   console.error('Server error:', err);
 });
 
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
+const SHUTDOWN_TIMEOUT_MS = 25_000;
+let shuttingDown = false;
+
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received, shutting down gracefully...`);
+
   server.close(() => {
     console.log('Server closed');
     process.exit(0);
   });
-});
+  server.closeIdleConnections();
+
+  setTimeout(() => {
+    console.log('Shutdown timeout reached, closing remaining connections');
+    server.closeAllConnections();
+    process.exit(0);
+  }, SHUTDOWN_TIMEOUT_MS).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 server.listen(PORT, HOST, () => {
   console.log(`
