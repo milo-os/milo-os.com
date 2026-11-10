@@ -74,6 +74,15 @@
   "overrides": {
     "@tailwindcss/typography": {
       "postcss-selector-parser": "^6.1.5"
+    },
+    "micromark-extension-math": {
+      "katex": "^0.18.2"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.5"
+    },
+    "markdownlint-cli": {
+      "minimatch": "^11.0.5"
     }
   },
   "lint-staged": {
