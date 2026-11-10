@@ -79,10 +79,10 @@
       "katex": "^0.18.2"
     },
     "@typescript-eslint/typescript-estree": {
-      "minimatch": "^11.0.5"
+      "minimatch": "^11.0.0"
     },
     "markdownlint-cli": {
-      "minimatch": "^11.0.5"
+      "minimatch": "^11.0.0"
     }
   },
   "lint-staged": {
