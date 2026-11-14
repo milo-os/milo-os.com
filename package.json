@@ -24,7 +24,7 @@
   "dependencies": {
     "@astrojs/alpinejs": "1.0.0",
     "@astrojs/mdx": "7.0.6",
-    "@astrojs/node": "11.1.3",
+    "@astrojs/node": "11.1.12",
     "@lucide/astro": "^1.27.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/typography": "^0.5.20",
